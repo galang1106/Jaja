@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roblox Group Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans pb-10">
+
+  <header class="bg-gray-800 p-4 sticky top-0 z-50 border-b border-gray-700 shadow-md">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-users text-red-500 text-xl"></i>
+        <h1 class="text-lg font-bold tracking-wide">Roblox Community</h1>
+      </div>
+      <span id="member-count" class="bg-red-500/20 text-red-400 text-xs px-2.5 py-1 rounded-full font-semibold">
+        Loading...
+      </span>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    
+    <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm flex items-center space-x-4">
+      <div class="w-14 h-14 bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-shield-halved text-2xl text-gray-400"></i>
+      </div>
+      <div class="overflow-hidden">
+        <h2 id="group-name" class="font-bold text-base truncate">Memuat Grup...</h2>
+        <p id="group-id-label" class="text-xs text-gray-400">ID: 758074897</p>
+      </div>
+    </div>
+
+    <div class="relative">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+      <input 
+        type="text" 
+        id="search-input" 
+        placeholder="Cari member di daftar ini..." 
+        class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition"
+        oninput="filterMembers()"
+      />
+    </div>
+
+    <div class="flex items-center justify-between pt-2">
+      <h3 class="text-sm font-semibold text-gray-300">Daftar Anggota</h3>
+      <span class="text-xs text-gray-500">Maks 100 terbaru</span>
+    </div>
+
+    <div id="members-list" class="space-y-2.5">
+      <div class="text-center py-8 text-gray-500 text-sm">
+        <i class="fa-solid fa-circle-notch animate-spin text-2xl text-red-500 mb-2"></i>
+        <p>Mengambil data dari Roblox...</p>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const GROUP_ID = '758074897';
+    // Menggunakan CORS Proxy gratis agar API Roblox bisa dipanggil dari browser
+    const CORS_PROXY = 'https://corsproxy.io/?';
+
+    let allMembers = [];
+
+    async function fetchGroupData() {
+      try {
+        // 1. Ambil Info Grup
+        const groupRes = await fetch(`${CORS_PROXY}https://groups.roblox.com/v1/groups/${GROUP_ID}`);
+        const groupData = await groupRes.json();
+        
+        document.getElementById('group-name').innerText = groupData.name || 'Grup Roblox';
+        document.getElementById('member-count').innerText = `${groupData.memberCount || 0} Member`;
+
+        // 2. Ambil Daftar Anggota
+        const membersRes = await fetch(`${CORS_PROXY}https://groups.roblox.com/v1/groups/${GROUP_ID}/users?limit=100`);
+        const membersData = await membersRes.json();
+        
+        const rawMembers = membersData.data || [];
+
+        // 3. Ambil Detail Tanggal Pembuatan Akun
+        allMembers = await Promise.all(
+          rawMembers.map(async (m) => {
+            try {
+              const userRes = await fetch(`${CORS_PROXY}https://users.roblox.com/v1/users/${m.user.userId}`);
+              const userData = await userRes.json();
+              
+              const createdDate = new Date(userData.created).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+              });
+
+              return {
+                id: m.user.userId,
+                username: m.user.username,
+                displayName: m.user.displayName,
+                created: createdDate
+              };
+            } catch (err) {
+              return {
+                id: m.user.userId,
+                username: m.user.username,
+                displayName: m.user.displayName,
+                created: 'Tidak diketahui'
+              };
+            }
+          })
+        );
+
+        renderMembers(allMembers);
+
+      } catch (error) {
+        console.error("Error:", error);
+        document.getElementById('members-list').innerHTML = `
+          <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center text-red-400 text-xs">
+            Gagal memuat data. Silakan refresh halaman.
+          </div>`;
+      }
+    }
+
+    function renderMembers(members) {
+      const container = document.getElementById('members-list');
+      
+      if (members.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 text-xs py-4">Anggota tidak ditemukan.</p>`;
+        return;
+      }
+
+      container.innerHTML = members.map(m => `
+        <div class="bg-gray-800 border border-gray-700/60 p-3 rounded-xl flex items-center justify-between shadow-sm active:scale-[0.99] transition">
+          <div class="flex items-center space-x-3 overflow-hidden">
+            <img 
+              src="https://tr.rbxcdn.com/30bf5a2181747e9231f2f01f80879ed8/150/150/AvatarHeadshot/Png" 
+              alt="${m.username}" 
+              class="w-10 h-10 rounded-full bg-gray-700 shrink-0 border border-gray-600"
+              onerror="this.src='https://via.placeholder.com/150/374151/FFFFFF?text=R'"
+            />
+            <div class="overflow-hidden">
+              <p class="font-semibold text-sm text-gray-100 truncate">${m.displayName}</p>
+              <p class="text-xs text-gray-400 truncate">@${m.username}</p>
+            </div>
+          </div>
+          
+          <div class="text-right shrink-0">
+            <span class="block text-[10px] text-gray-400 uppercase font-medium">Akun Dibuat</span>
+            <span class="text-xs font-semibold text-red-400">${m.created}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterMembers() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const filtered = allMembers.filter(m => 
+        m.username.toLowerCase().includes(query) || 
+        m.displayName.toLowerCase().includes(query)
+      );
+      renderMembers(filtered);
+    }
+
+    // Jalankan fungsi saat halaman dibuka
+    fetchGroupData();
+  </script>
+</body>
+</html>
