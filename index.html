@@ -46,7 +46,7 @@
 
     <div class="flex items-center justify-between pt-2">
       <h3 class="text-sm font-semibold text-gray-300">Daftar Anggota</h3>
-      <span class="text-xs text-gray-500">20 Terbaru</span>
+      <span class="text-xs text-gray-500">Terbaru</span>
     </div>
 
     <div id="members-list" class="space-y-2.5">
@@ -62,22 +62,21 @@
     const GROUP_ID = '758074897';
     let allMembers = [];
 
-    // Menggunakan RoProxy (Khusus API Roblox)
     async function fetchGroupData() {
       try {
         // 1. Ambil Info Grup
         const groupRes = await fetch(`https://groups.roproxy.com/v1/groups/${GROUP_ID}`);
-        if (!groupRes.ok) throw new Error('Gagal muat grup');
-        const groupData = await groupRes.json();
-        
-        document.getElementById('group-name').innerText = groupData.name || 'Grup Roblox';
-        document.getElementById('member-count').innerText = `${groupData.memberCount || 0} Member`;
+        if (groupRes.ok) {
+          const groupData = await groupRes.json();
+          document.getElementById('group-name').innerText = groupData.name || 'LAXEROUSE';
+          document.getElementById('member-count').innerText = `${groupData.memberCount || 0} Member`;
+        }
 
-        // 2. Ambil Daftar Anggota
-        const membersRes = await fetch(`https://groups.roproxy.com/v1/groups/${GROUP_ID}/users?limit=20`);
+        // 2. Ambil Anggota Grup (Gunakan endpoint versi v2 agar data user langsung kebaca)
+        const membersRes = await fetch(`https://groups.roproxy.com/v2/groups/${GROUP_ID}/users?limit=20&sortOrder=Desc`);
         if (!membersRes.ok) throw new Error('Gagal muat member');
-        const membersData = await membersRes.json();
         
+        const membersData = await membersRes.json();
         const rawMembers = membersData.data || [];
 
         if (rawMembers.length === 0) {
@@ -85,17 +84,22 @@
           return;
         }
 
-        allMembers = rawMembers.map(m => ({
-          id: m.user.userId,
-          username: m.user.username,
-          displayName: m.user.displayName,
-          created: 'Memuat...'
-        }));
+        // Format data member
+        allMembers = rawMembers.map(m => {
+          const userObj = m.user || m;
+          return {
+            id: userObj.userId || userObj.id,
+            username: userObj.username || 'RobloxUser',
+            displayName: userObj.displayName || userObj.username || 'RobloxUser',
+            created: 'Memuat...'
+          };
+        });
 
         renderMembers(allMembers);
 
         // 3. Ambil Tanggal Buat Akun
         for (let i = 0; i < allMembers.length; i++) {
+          if (!allMembers[i].id) continue;
           try {
             const userRes = await fetch(`https://users.roproxy.com/v1/users/${allMembers[i].id}`);
             if (userRes.ok) {
@@ -117,7 +121,7 @@
         console.error("Error:", error);
         document.getElementById('members-list').innerHTML = `
           <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center text-red-400 text-xs">
-            Gagal menghubungkan ke server. Silakan refresh halaman.
+            Gagal memuat daftar anggota. Silakan refresh halaman.
           </div>`;
       }
     }
