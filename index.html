@@ -63,35 +63,49 @@
   </main>
 
   <script>
+    const GROUP_ID = '758074897';
     let allMembers = [];
 
     async function loadData() {
       try {
-        const res = await fetch('/api/roblox');
-        const data = await res.json();
+        // Fetch Info Group
+        const groupRes = await fetch(`https://groups.roproxy.com/v1/groups/${GROUP_ID}`);
+        const groupData = await groupRes.json();
 
-        document.getElementById('group-name').innerText = data.name || 'LAXEROUSE';
-        document.getElementById('member-count').innerText = `${data.memberCount ? data.memberCount.toLocaleString() : '0'} Member`;
+        if (groupData.name) {
+          document.getElementById('group-name').innerText = groupData.name;
+        }
+        if (groupData.memberCount) {
+          document.getElementById('member-count').innerText = `${groupData.memberCount.toLocaleString()} Member`;
+        }
 
-        allMembers = data.members || [];
-        renderMembers(allMembers);
+        // Fetch Daftar Member (Ambil 100 member terbaru)
+        const membersRes = await fetch(`https://groups.roproxy.com/v1/groups/${GROUP_ID}/users?sortOrder=Desc&limit=100`);
+        const membersData = await membersRes.json();
+
+        if (membersData.data && membersData.data.length > 0) {
+          allMembers = membersData.data.map(m => ({
+            username: m.user.username,
+            displayName: m.user.displayName,
+            role: m.role ? m.role.name : 'Member'
+          }));
+          renderMembers(allMembers);
+        } else {
+          document.getElementById('members-list').innerHTML = `
+            <p class="text-center text-gray-500 text-xs py-4">Tidak ada member publik yang ditemukan.</p>`;
+        }
 
       } catch (err) {
         console.error(err);
         document.getElementById('members-list').innerHTML = `
           <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center text-red-400 text-xs">
-            Gagal menghubungkan data. Pastikan koneksi internet stabil.
+            Gagal menghubungkan data Roblox. Silakan refresh halaman.
           </div>`;
       }
     }
 
     function renderMembers(members) {
       const container = document.getElementById('members-list');
-      if (!members || members.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 text-xs py-4">Tidak ada data member yang dapat ditampilkan.</p>`;
-        return;
-      }
-
       container.innerHTML = members.map(m => `
         <div class="bg-[#181f2e] border border-gray-800 p-3.5 rounded-xl flex items-center justify-between shadow-sm">
           <div class="flex items-center space-x-3 overflow-hidden">
@@ -104,7 +118,7 @@
             </div>
           </div>
           <div class="text-right shrink-0 pl-2">
-            <span class="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">Pangkat</span>
+            <span class="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">Jabatan</span>
             <span class="text-xs font-semibold text-red-400">${m.role}</span>
           </div>
         </div>
