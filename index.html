@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Laxerouse Community - Member Tracker</title>
+  <title>Laxerouse Community</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
@@ -75,14 +75,14 @@
         document.getElementById('group-name').innerText = data.name;
         document.getElementById('member-count').innerText = `${data.memberCount} Member`;
 
-        allMembers = data.members;
+        allMembers = data.members || [];
         renderMembers(allMembers);
 
       } catch (err) {
         console.error(err);
         document.getElementById('members-list').innerHTML = `
           <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center text-red-400 text-xs">
-            Gagal mengambil data riwayat. Pastikan API Key di file /api/roblox.js sudah benar.
+            Gagal memuat data member.
           </div>`;
       }
     }
@@ -90,7 +90,7 @@
     function renderMembers(members) {
       const container = document.getElementById('members-list');
       if (!members || members.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 text-xs py-4">Tidak ada riwayat bergabung terbaru.</p>`;
+        container.innerHTML = `<p class="text-center text-gray-500 text-xs py-4">Tidak ada data member.</p>`;
         return;
       }
 
@@ -106,7 +106,7 @@
             </div>
           </div>
           <div class="text-right shrink-0 pl-2">
-            <span class="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">Tanggal Masuk</span>
+            <span class="block text-[10px] text-gray-400 font-medium uppercase tracking-wider">Status / Waktu</span>
             <span class="text-xs font-semibold text-red-400">${m.joinTime}</span>
           </div>
         </div>
