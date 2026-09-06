@@ -62,21 +62,22 @@
     const GROUP_ID = '758074897';
     let allMembers = [];
 
-    async function fetchFromBackend(robloxUrl) {
-      const res = await fetch(`/api/roblox?endpoint=${encodeURIComponent(robloxUrl)}`);
-      if (!res.ok) throw new Error('API Error');
-      return await res.json();
-    }
-
+    // Menggunakan RoProxy (Khusus API Roblox)
     async function fetchGroupData() {
       try {
-        // 1. Info Grup
-        const groupData = await fetchFromBackend(`https://groups.roblox.com/v1/groups/${GROUP_ID}`);
+        // 1. Ambil Info Grup
+        const groupRes = await fetch(`https://groups.roproxy.com/v1/groups/${GROUP_ID}`);
+        if (!groupRes.ok) throw new Error('Gagal muat grup');
+        const groupData = await groupRes.json();
+        
         document.getElementById('group-name').innerText = groupData.name || 'Grup Roblox';
         document.getElementById('member-count').innerText = `${groupData.memberCount || 0} Member`;
 
-        // 2. Ambil 20 anggota saja agar cepat dan tidak crash
-        const membersData = await fetchFromBackend(`https://groups.roblox.com/v1/groups/${GROUP_ID}/users?limit=20`);
+        // 2. Ambil Daftar Anggota
+        const membersRes = await fetch(`https://groups.roproxy.com/v1/groups/${GROUP_ID}/users?limit=20`);
+        if (!membersRes.ok) throw new Error('Gagal muat member');
+        const membersData = await membersRes.json();
+        
         const rawMembers = membersData.data || [];
 
         if (rawMembers.length === 0) {
@@ -93,17 +94,20 @@
 
         renderMembers(allMembers);
 
-        // 3. Ambil tanggal pembuatan akun satu per satu secara bertahap
+        // 3. Ambil Tanggal Buat Akun
         for (let i = 0; i < allMembers.length; i++) {
           try {
-            const userData = await fetchFromBackend(`https://users.roblox.com/v1/users/${allMembers[i].id}`);
-            const date = new Date(userData.created).toLocaleDateString('id-ID', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric'
-            });
-            allMembers[i].created = date;
-            renderMembers(allMembers);
+            const userRes = await fetch(`https://users.roproxy.com/v1/users/${allMembers[i].id}`);
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              const date = new Date(userData.created).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+              });
+              allMembers[i].created = date;
+              renderMembers(allMembers);
+            }
           } catch (e) {
             allMembers[i].created = 'Aktif';
           }
@@ -113,7 +117,7 @@
         console.error("Error:", error);
         document.getElementById('members-list').innerHTML = `
           <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center text-red-400 text-xs">
-            Gagal mengambil data. Silakan refresh halaman.
+            Gagal menghubungkan ke server. Silakan refresh halaman.
           </div>`;
       }
     }
