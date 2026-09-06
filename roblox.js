@@ -1,12 +1,11 @@
 export default async function handler(req, res) {
-  // Mengizinkan CORS agar frontend bisa akses
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
 
   const { endpoint } = req.query;
 
   if (!endpoint) {
-    return res.status(400).json({ error: 'Endpoint query diperlukan' });
+    return res.status(400).json({ error: 'Endpoint diperlukan' });
   }
 
   try {
@@ -17,7 +16,7 @@ export default async function handler(req, res) {
     });
 
     if (!robloxResponse.ok) {
-      return res.status(robloxResponse.status).json({ error: 'Gagal mengambil data dari Roblox' });
+      return res.status(robloxResponse.status).json({ error: 'Gagal fetch data' });
     }
 
     const data = await robloxResponse.json();
